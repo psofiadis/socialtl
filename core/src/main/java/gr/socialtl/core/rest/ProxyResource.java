@@ -1,5 +1,7 @@
 package gr.socialtl.core.rest;
 
+import java.io.IOException;
+import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HostnameVerifier;
@@ -10,13 +12,13 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
 
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import gr.socialtl.core.model.dto.TweetDTOImpl;
+import org.apache.log4j.Logger;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -27,21 +29,28 @@ import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.oauth.client.OAuthClientFilter;
 import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.oauth.signature.OAuthSecrets;
-import com.sun.jersey.spi.resource.Singleton;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Created by Panagiotis on 1/1/2016.
  */
-@Singleton
-@Path( "/proxy")
+@RestController
+@RequestMapping("/statuses")
 @Consumes( MediaType.APPLICATION_JSON )
 @Produces( MediaType.APPLICATION_JSON )
 public class ProxyResource
 {
-    private String endpointUrl = "https://localhost:8443/api/protected";
+    private String endpointUrl = "https://api.twitter.com/1.1/statuses/show.json?id=";
     private final String SIGNATURE_METHOD = "HMAC-SHA1";
     private OAuthClientFilter oauthFilter;
     private Client client;
+
+    Logger log = Logger.getLogger(ProxyResource.class);
 
     public ProxyResource()
     {
@@ -49,27 +58,36 @@ public class ProxyResource
         initClient();
     }
 
-    @GET
-    public String fetchOAuthProtectedData()
+    @RequestMapping(value = "/byid", method = RequestMethod.GET, produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+    public TweetDTOImpl fetchOAuthProtectedData(@RequestParam(value = "id", required = true) BigInteger id)
     {
-        initOAuthFilter( "3a4393c3da1a4e316ee66c0cc61c71", "fe1372c074185b19c309964812bb8f3f2256ba514aea8a318" );
+        initOAuthFilter( "UxCZhTyzPKImEErqgbIatvbI7", "jiP1S6RNY2ZgZkK7R568ieq1xQkomLjTv10m3sM9qHGPkUJyjp" );
 
         // Let's use the Jersey Client to make the request
-        WebResource webResource = getSignedWebResource( endpointUrl );
+        WebResource webResource = getSignedWebResource( endpointUrl + id);
         WebResource.Builder webBuilder = webResource.getRequestBuilder()
                 .accept( MediaType.APPLICATION_JSON )
                 .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE );
 
         try
         {
-            return webBuilder.get( String.class );
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            String msg = webBuilder.get( String.class );
+            TweetDTOImpl dto = mapper.readValue(msg, TweetDTOImpl.class);
+            return dto;
+//            return webBuilder.get( String.class );
         }
         catch( UniformInterfaceException ex )
         {
-            return ex.getResponse().getEntity( String.class );
+            log.info(ex.getMessage()+"\n"+ ex.getStackTrace());
+//            return ex.getResponse().getEntity( String.class );
         }
+        catch(IOException ex){
+            log.info(ex.getMessage()+"\n"+ ex.getStackTrace());
+        }
+        return null;
     }
-
 
     /**
      * Get a WebResource instance with the OAuth filter applied
@@ -83,7 +101,6 @@ public class ProxyResource
         return webResource;
     }
 
-
     /**
      * Initialise the Jersey Client
      */
@@ -94,7 +111,6 @@ public class ProxyResource
         config.getClasses().add( JacksonJaxbJsonProvider.class );
         client = Client.create( config );
     }
-
 
     /**
      * Initialise the Jersey OAuth Filter with the key and secret
@@ -115,7 +131,6 @@ public class ProxyResource
 
         oauthFilter = new OAuthClientFilter( client.getProviders(), params, secrets );
     }
-
 
     /**
      * The purpose of the initialisation method is to modify the SSLContext

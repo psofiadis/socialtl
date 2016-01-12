@@ -1,5 +1,5 @@
 
-package gr.socialtl.core.pojo;
+package gr.socialtl.core.model.dto;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -8,15 +8,18 @@ import javax.annotation.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import gr.socialtl.core.model.db.TweetDBImpl;
 import gr.socialtl.core.pojo.internal.Entities;
 import gr.socialtl.core.pojo.internal.ExtendedEntities;
 import gr.socialtl.core.pojo.internal.User;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({
     "created_at",
     "id",
@@ -722,6 +725,12 @@ public class TweetDTOImpl {
         this.additionalProperties.put(name, value);
     }
 
+    public TweetDBImpl getDBImpl(){
+      TweetDBImpl tweetDB = new TweetDBImpl();
+        tweetDB.setCreatedAt(this.getCreatedAt());
+        tweetDB.setTweetIdStr(this.getIdStr());
+        return tweetDB;
+    }
 
     @Override
     public boolean equals(Object o) {

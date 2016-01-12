@@ -1,6 +1,6 @@
 package gr.socialtl.core.controllers;
 
-import gr.socialtl.core.model.StatusDTOImpl;
+import gr.socialtl.core.model.dto.StatusDTOImpl;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;

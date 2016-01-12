@@ -1,4 +1,4 @@
-package gr.socialtl.core.model;
+package gr.socialtl.core.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

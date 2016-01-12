@@ -14,19 +14,33 @@ import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint;
 import com.twitter.hbc.core.processor.StringDelimitedProcessor;
 import com.twitter.hbc.httpclient.auth.Authentication;
 import com.twitter.hbc.httpclient.auth.OAuth1;
-import gr.socialtl.core.pojo.TweetDTOImpl;
+import gr.socialtl.core.model.dto.TweetDTOImpl;
+import gr.socialtl.core.service.TweetService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+@Component
 public class FilterStreamExample {
 
-    public static void run(String consumerKey, String consumerSecret, String token, String secret) throws InterruptedException {
+    @Autowired
+    TweetService tweetService;
+
+    public FilterStreamExample() {
+        System.out.println("For debugging purposes "+ this.getClass());
+    }
+
+    public void run(String consumerKey, String consumerSecret, String token, String secret) throws InterruptedException {
         BlockingQueue<String> queue = new LinkedBlockingQueue<String>(10000);
         StatusesFilterEndpoint endpoint = new StatusesFilterEndpoint();
         // add some track terms
-        endpoint.trackTerms(Lists.newArrayList("AdonisGeorgiadi", "λαβρεντι", "lavrentis","kmitsotakis","τσιπρας","μειμαρακης","ΝΔ","Κυριακος","κουλη","Αδωνι","αντωναρος","metonkyriako","atsipras","Ευριπίδης","βουλευτικη"));
+        endpoint.trackTerms(Lists.newArrayList("AdonisGeorgiadi","Αδων","Αδον","λαβρεντι", "lavrentis","γενικως","honerich","τσιπρας","atsipras","syriza","tsipras","συριζα"));
 
         Authentication auth = new OAuth1(consumerKey, consumerSecret, token, secret);
         // Authentication auth = new BasicAuth(username, password);
@@ -48,15 +62,16 @@ public class FilterStreamExample {
             String msg = queue.take();
             try {
                 TweetDTOImpl tweetDTO = mapper.readValue(msg, TweetDTOImpl.class);
-
-                System.out.println("ID: "+tweetDTO.getId()+"  Tweet text is "+tweetDTO.getText() + " user " + tweetDTO.getUser().getName() + " in reply to " + tweetDTO.getInReplyToScreenName());
+                String inReply = tweetDTO.getInReplyToScreenName() != null ? " in reply to " + tweetDTO.getInReplyToScreenName() : "";
+                System.out.println( "Tweet text is "+tweetDTO.getText() + " https://twitter.com/" + tweetDTO.getUser().getScreenName() + "/statuses/" + tweetDTO.getId()+ inReply);
+                tweetService.saveTweet(tweetDTO);
             } catch (JsonGenerationException e) {
             e.printStackTrace();
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
-            }
+            }catch(Throwable e){}
         }
 
         client.stop();
